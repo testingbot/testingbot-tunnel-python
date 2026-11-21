@@ -1,0 +1,84 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: pip install ruff mypy pytest
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy --strict src
+
+  test:
+    name: Python ${{ matrix.python }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        include:
+          - os: macos-latest
+            python: "3.13"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -e '.[test]'
+      - run: pytest -v
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: pip install build twine
+      - run: python -m build
+      - run: twine check --strict dist/*
+
+  live:
+    name: Live (TestingBot)
+    runs-on: ubuntu-latest
+    needs: test
+    # Secrets are not available to pull requests from forks, the job then skips its tests
+    env:
+      TB_KEY: ${{ secrets.TB_KEY }}
+      TB_SECRET: ${{ secrets.TB_SECRET }}
+    steps:
+      - name: Check for credentials
+        id: credentials
+        run: |
+          if [ -n "$TB_KEY" ] && [ -n "$TB_SECRET" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::TB_KEY/TB_SECRET secrets are not set, skipping the live tests"
+          fi
+      - uses: actions/checkout@v5
+        if: steps.credentials.outputs.present == 'true'
+      - uses: actions/setup-python@v6
+        if: steps.credentials.outputs.present == 'true'
+        with:
+          python-version: "3.13"
+      - if: steps.credentials.outputs.present == 'true'
+        run: pip install -e '.[live]'
+      - if: steps.credentials.outputs.present == 'true'
+        run: pytest tests/live -v
+        env:
+          TESTINGBOT_LIVE: "1"

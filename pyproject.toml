@@ -1,0 +1,76 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "testingbot-tunnel"
+dynamic = ["version"]
+description = "Download and launch TestingBot Tunnel from Python, with a pytest plugin"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.9"
+authors = [{ name = "TestingBot", email = "info@testingbot.com" }]
+keywords = ["testingbot", "tunnel", "selenium", "pytest", "testing", "automation", "cloud"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: Pytest",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Testing",
+    "Typing :: Typed",
+]
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+live = ["pytest>=7", "selenium>=4.10"]
+
+[project.urls]
+Homepage = "https://github.com/testingbot/testingbot-tunnel-python"
+Documentation = "https://testingbot.com/support/tunnel"
+Issues = "https://github.com/testingbot/testingbot-tunnel-python/issues"
+Changelog = "https://github.com/testingbot/testingbot-tunnel-python/blob/main/CHANGELOG.md"
+
+[project.entry-points.pytest11]
+testingbot_tunnel = "testingbot_tunnel.pytest_plugin"
+
+[tool.hatch.version]
+path = "src/testingbot_tunnel/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/testingbot_tunnel"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "tests", "README.md", "CHANGELOG.md", "LICENSE"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["live: needs TestingBot credentials and network access (run with TESTINGBOT_LIVE=1)"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF"]
+ignore = [
+    "S101",   # assert is fine in tests and for type narrowing
+    "S603",   # subprocess calls with arguments we build ourselves
+    "S607",   # java and tar are looked up on PATH on purpose
+    "UP006",  # keep typing.List etc. readable for 3.9 users reading the source
+    "UP007",
+    "UP035",
+    "UP045",
+    "SIM105", # try/except/pass reads fine
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "B011", "RUF043", "E501"]
